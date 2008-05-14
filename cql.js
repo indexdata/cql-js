@@ -4,7 +4,6 @@ function indent(n) {
         s = s + " ";
     return s;
 }
-
 // CQLModifier
 var CQLModifier = function () {
     this.name = null;
