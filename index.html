@@ -4,9 +4,9 @@
     <script type="text/javascript">
         var cp = new CQLParser();
         
-        function parseOnSubmit(form) {
+        function parseInput(query) {
             try {
-                cp.parse(form.q.value);
+                cp.parse(query);
                 document.getElementById("output").value = cp.toXCQL();
             } catch (e) {
                 document.getElementById("output").value = e.message;
@@ -17,9 +17,9 @@
   </head>
   <body>
     <div>
-      <form name="test" onsubmit="parseOnSubmit(this); return false;">
+      <form name="test" onsubmit="parseInput(this.q.value); return false;">
         Query: 
-        <input type="text" name="q" size="160"></input>
+        <input type="text" name="q" size="160" onkeyup="parseInput(this.value); return false;"></input>
         <br>
         <br>
         XCQL:
