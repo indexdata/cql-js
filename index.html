@@ -8,8 +8,11 @@
             try {
                 cp.parse(query);
                 document.getElementById("output").value = cp.toXCQL();
+                document.getElementById("output2").value = cp.toFQ();
             } catch (e) {
                 document.getElementById("output").value = e.message;
+                document.getElementById("output2").value = e.message;
+                throw e;
             }
         }
     </script>
@@ -26,6 +29,7 @@
         <br>
       </form>
       <textarea id="output" rows="80" cols="80"></textarea>
+      <textarea id="output2" rows="80" cols="80"></textarea>
     </div>
   </body>
 </html>

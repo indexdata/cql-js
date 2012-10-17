@@ -23,8 +23,17 @@ CQLModifier.prototype = {
                 + "<value>" + this.value +"</value>\n";
         s = s + indent(n+1) + "</modifier>\n";
         return s;
+    },
+
+    toFQ: function () {
+        //we ignore modifier relation symbol, for value-less modifiers
+        //we assume 'true'
+        var value = this.value.length > 0 ? this.value : "true";
+        var s = '"'+this.name+'": "'+value+'"';
+        return s;
     }
 }
+
 // CQLSearchClause
 var CQLSearchClause = function (field, fielduri, relation, relationuri, 
                                 modifiers, term) {
@@ -65,7 +74,38 @@ CQLSearchClause.prototype = {
         s = s + indent(n+1) + "<term>" + this.term + "</term>\n";
         s = s + indent(n) + "</searchClause>\n";
         return s;
+    },
+
+    toFQ: function () {
+        var s = '{ "term": "'+this.term+'"';
+        if (this.field.length > 0 && this.field != 'cql.serverChoice')
+          s+= ', "field": "'+this.field+'"';
+        if (this.relation.length > 0 && this.relation != 'scr')
+          s+= ', "relation": "'+this._mapRelation(this.relation)+'"';
+        for (var i = 0; i < this.modifiers.length; i++) {
+          //since modifiers are mapped to keys, ignore the reserved ones
+          if (this.modifiers[i].name == "term"
+            ||this.modifiers[i].name == "field"
+            ||this.modifiers[i].name == "relation")
+            continue;
+          s += ', ' + this.modifiers[i].toFQ();
+        }
+        s += ' }';
+        return s;
+    },
+
+    _mapRelation: function (rel) {
+      switch(rel) {
+        case "<" : return "lt";
+        case ">" : return "gt";
+        case "=" : return "eq";
+        case "<>" : return "ne";
+        case ">=" : return "ge";
+        case "<=" : return "le";
+        default: return rel;
+      }
     }
+
 }
 // CQLBoolean
 var CQLBoolean = function() {
@@ -94,7 +134,19 @@ CQLBoolean.prototype = {
             this.right.toXCQL(n+2) + indent(n+1) + "</rightOperand>\n";
         s = s + indent(n) + "</triple>\n";
         return s;
+    },
+
+    toFQ: function () {
+      var s = ' { "op": "'+this.op+'"';
+      //proximity modifiers
+      for (var i = 0; i < this.modifiers.length; i++)
+        s += ', ' + this.modifiers[i].toFQ();
+      s += ', "s1": '+this.left.toFQ();
+      s += ', "s2": '+this.right.toFQ();
+      s += ' }'
+      return s;
     }
+
 }
 // CQLParser
 var CQLParser = function () {
@@ -123,6 +175,9 @@ CQLParser.prototype = {
     },
     toXCQL: function () {
         return this.tree.toXCQL();
+    },
+    toFQ: function () {
+        return this.tree.toFQ();
     },
     _parseQuery: function(field, relation, modifiers) {
         var left = this._parseSearchClause(field, relation, modifiers);
