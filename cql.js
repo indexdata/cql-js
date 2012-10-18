@@ -51,10 +51,17 @@ var CQLSearchClause = function (field, fielduri, relation, relationuri,
 
 CQLSearchClause.prototype = {
     toString: function () {
-      return (this.field ? this.field + ' ' : '') + 
-        (this.relation ? this.relation : '') +
+      var field = this.field;
+      var relation = this.relation;
+      if (field == 'cql.serverChoice' && relation == 'scr') {
+        //avoid redundant field/relation
+        field = null;
+        relation = null;
+      }
+      return (field ? field + ' ' : '') + 
+        (relation ? relation : '') +
         (this.modifiers.length > 0 ? '/' + this.modifiers.join('/') : '') +
-        (this.relation || this.modifiers.length ? ' ' : '') +
+        (relation || this.modifiers.length ? ' ' : '') +
         '"' + this.term + '"';
     },
 
