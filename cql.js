@@ -143,7 +143,7 @@ CQLBoolean.prototype = {
     toString: function () {
       return (this.left.op ? '(' + this.left + ')' : this.left) + ' ' + 
         this.op.toUpperCase() +
-        (this.modifiers.lenght > 0 ? '/' + this.modifiers.join('/') : '') + 
+        (this.modifiers.length > 0 ? '/' + this.modifiers.join('/') : '') + 
         ' ' + (this.right.op ? '(' + this.right + ')' : this.right);;
     },
     toXCQL: function (n) {
