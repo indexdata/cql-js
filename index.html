@@ -8,7 +8,12 @@
             try {
                 cp.parse(query);
                 document.getElementById("output").value = cp.toXCQL();
-                document.getElementById("output2").value = cp.toFQ();
+                document.getElementById("output2").value = cp.toString();;
+                //re-parse fq to see the o/i matches
+                var fq = cp.toFQ();
+                document.getElementById("output3").value = fq;
+                cp.parseFromFQ(fq);
+                document.getElementById("output4").value = cp.toString();
             } catch (e) {
                 document.getElementById("output").value = e.message;
                 document.getElementById("output2").value = e.message;
@@ -30,6 +35,8 @@
       </form>
       <textarea id="output" rows="80" cols="80"></textarea>
       <textarea id="output2" rows="80" cols="80"></textarea>
+      <textarea id="output3" rows="80" cols="80"></textarea>
+      <textarea id="output4" rows="80" cols="80"></textarea>
     </div>
   </body>
 </html>

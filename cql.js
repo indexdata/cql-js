@@ -12,6 +12,10 @@ var CQLModifier = function () {
 }
 
 CQLModifier.prototype = {
+    toString: function () {
+      return this.name + this.relation + this.value;
+    },
+
     toXCQL: function (n) {
         var s = indent(n+1) + "<modifier>\n";
         s = s + indent(n+2) + "<name>" + this.name + "</name>\n";
@@ -46,6 +50,14 @@ var CQLSearchClause = function (field, fielduri, relation, relationuri,
 }
 
 CQLSearchClause.prototype = {
+    toString: function () {
+      return (this.field ? this.field + ' ' : '') + 
+        (this.relation ? this.relation : '') +
+        (this.modifiers.length > 0 ? '/' + this.modifiers.join('/') : '') +
+        (this.relation || this.modifiers.length ? ' ' : '') +
+        '"' + this.term + '"';
+    },
+
     toXCQL: function (n) {
         var s = indent(n) + "<searchClause>\n";
         if (this.fielduri.length > 0)
@@ -104,6 +116,18 @@ CQLSearchClause.prototype = {
         case "<=" : return "le";
         default: return rel;
       }
+    },
+
+    _remapRelation: function (rel) {
+      switch(rel) {
+        case "lt" : return "<";
+        case "gt" : return ">";
+        case "eq" : return "=";
+        case "ne" : return "<>";
+        case "ge" : return ">=";
+        case "le" : return "<=";
+        default: return rel;
+      }
     }
 
 }
@@ -116,6 +140,12 @@ var CQLBoolean = function() {
 }
 
 CQLBoolean.prototype = {
+    toString: function () {
+      return (this.left.op ? '(' + this.left + ')' : this.left) + ' ' + 
+        this.op.toUpperCase() +
+        (this.modifiers.lenght > 0 ? '/' + this.modifiers.join('/') : '') + 
+        ' ' + (this.right.op ? '(' + this.right + ')' : this.right);;
+    },
     toXCQL: function (n) {
         var s = indent(n) + "<triple>\n";
         s = s + indent(n+1) + "<boolean>\n" +
@@ -173,11 +203,68 @@ CQLParser.prototype = {
         if (this.look != "")
             throw new Error("EOF expected");
     },
+    parseFromFQ: function (query) {
+       if (!query)
+          throw new Error("The query to be parsed cannot be empty");
+       if (typeof query == 'string')
+         query = JSON.parse(query);
+       this.tree = this._parseFromFQ(query);
+    },
+    _parseFromFQ: function (fq) {
+        //op-node
+        if (fq.hasOwnProperty('op') 
+            && fq.hasOwnProperty('s1')
+            && fq.hasOwnProperty('s2')) {
+          var node = new CQLBoolean();
+          node.op = fq.op;
+          node.left = this._parseFromFQ(fq.s1);
+          node.right = this._parseFromFQ(fq.s2);
+          //include all other members as modifiers
+          node.modifiers = [];
+          for (var key in fq) {
+            if (key == 'op' || key == 's1' || key == 's2')
+              continue;
+            var mod = new CQLModifier();
+            mod.name = key;
+            mod.relation = '=';
+            mod.value = fq[key];
+            node.modifiers.push(mod);
+          }
+          return node;
+        }
+        //search-clause node
+        if (fq.hasOwnProperty('term')) {
+          var node = new CQLSearchClause();
+          node.term = fq.term;
+          node.field = fq.hasOwnProperty('field') 
+            ? fq.field : 'cql.serverChoice';
+          node.relation = fq.hasOwnProperty('relation')
+            ? node._remapRelation(fq.relation) : 'scr';
+          //include all other members as modifiers
+          node.relationuri = '';
+          node.fielduri = '';
+          node.modifiers = [];
+          for (var key in fq) {
+            if (key == 'term' || key == 'field' || key == 'relation')
+              continue;
+            var mod = new CQLModifier();
+            mod.name = key;
+            mod.relation = '=';
+            mod.value = fq[key];
+            node.modifiers.push(mod);
+          }
+          return node;
+        }
+        throw new Error('Unknow node type; '+JSON.stringify(fq));
+    },
     toXCQL: function () {
         return this.tree.toXCQL();
     },
     toFQ: function () {
         return this.tree.toFQ();
+    },
+    toString: function () {
+        return this.tree.toString();
     },
     _parseQuery: function(field, relation, modifiers) {
         var left = this._parseSearchClause(field, relation, modifiers);
