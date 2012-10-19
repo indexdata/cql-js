@@ -1,7 +1,9 @@
-function indent(n) {
+var EXPORTED_SYMBOLS = ["CQLParser"];
+
+function indent(n, c) {
     var s = "";
     for (var i = 0; i < n; i++)
-        s = s + " ";
+        s = s + c;
     return s;
 }
 // CQLModifier
@@ -16,16 +18,16 @@ CQLModifier.prototype = {
       return this.name + this.relation + this.value;
     },
 
-    toXCQL: function (n) {
-        var s = indent(n+1) + "<modifier>\n";
-        s = s + indent(n+2) + "<name>" + this.name + "</name>\n";
+    toXCQL: function (n, c) {
+        var s = indent(n+1, c) + "<modifier>\n";
+        s = s + indent(n+2, c) + "<name>" + this.name + "</name>\n";
         if (this.relation != null)
-            s = s + indent(n+2) 
+            s = s + indent(n+2, c) 
                 + "<relation>" + this.relation + "</relation>\n";
         if (this.value != null)
-            s = s + indent(n+2) 
+            s = s + indent(n+2, c) 
                 + "<value>" + this.value +"</value>\n";
-        s = s + indent(n+1) + "</modifier>\n";
+        s = s + indent(n+1, c) + "</modifier>\n";
         return s;
     },
 
@@ -65,38 +67,38 @@ CQLSearchClause.prototype = {
         '"' + this.term + '"';
     },
 
-    toXCQL: function (n) {
-        var s = indent(n) + "<searchClause>\n";
+    toXCQL: function (n, c) {
+        var s = indent(n, c) + "<searchClause>\n";
         if (this.fielduri.length > 0)
         {
-            s = s + indent(n+1) + "<prefixes>\n" +
-                indent(n+2) + "<prefix>\n" +
-                indent(n+3) + "<identifier>" + this.fielduri +
+            s = s + indent(n+1, c) + "<prefixes>\n" +
+                indent(n+2, c) + "<prefix>\n" +
+                indent(n+3, c) + "<identifier>" + this.fielduri +
                 "</identifier>\n" +
-                indent(n+2) + "</prefix>\n" +
-                indent(n+1) + "</prefixes>\n";
+                indent(n+2, c) + "</prefix>\n" +
+                indent(n+1, c) + "</prefixes>\n";
         }
-        s = s + indent(n+1) + "<index>" + this.field + "</index>\n";
-        s = s + indent(n+1) + "<relation>\n";
+        s = s + indent(n+1, c) + "<index>" + this.field + "</index>\n";
+        s = s + indent(n+1, c) + "<relation>\n";
         if (this.relationuri.length > 0) {
-            s = s + indent(n+2) +
+            s = s + indent(n+2, c) +
                 "<identifier>" + this.relationuri + "</identifier>\n";
         }
-        s = s + indent(n+2) + "<value>" + this.relation + "</value>\n";
+        s = s + indent(n+2, c) + "<value>" + this.relation + "</value>\n";
         if (this.modifiers.length > 0) {
-            s = s + indent(n+2) + "<modifiers>\n";
+            s = s + indent(n+2, c) + "<modifiers>\n";
             for (var i = 0; i < this.modifiers.length; i++)
-                s = s + this.modifiers[i].toXCQL(n+2);
-            s = s + indent(n+2) + "</modifiers>\n";
+                s = s + this.modifiers[i].toXCQL(n+2, c);
+            s = s + indent(n+2, c) + "</modifiers>\n";
         }
-        s = s + indent(n+1) + "</relation>\n";
-        s = s + indent(n+1) + "<term>" + this.term + "</term>\n";
-        s = s + indent(n) + "</searchClause>\n";
+        s = s + indent(n+1, c) + "</relation>\n";
+        s = s + indent(n+1, c) + "<term>" + this.term + "</term>\n";
+        s = s + indent(n, c) + "</searchClause>\n";
         return s;
     },
 
     toFQ: function () {
-        var s = '{ "term": "'+this.term+'"';
+        var s = '{"term": "'+this.term+'"';
         if (this.field.length > 0 && this.field != 'cql.serverChoice')
           s+= ', "field": "'+this.field+'"';
         if (this.relation.length > 0 && this.relation != 'scr')
@@ -109,7 +111,7 @@ CQLSearchClause.prototype = {
             continue;
           s += ', ' + this.modifiers[i].toFQ();
         }
-        s += ' }';
+        s += '}';
         return s;
     },
 
@@ -153,34 +155,35 @@ CQLBoolean.prototype = {
         (this.modifiers.length > 0 ? '/' + this.modifiers.join('/') : '') + 
         ' ' + (this.right.op ? '(' + this.right + ')' : this.right);;
     },
-    toXCQL: function (n) {
-        var s = indent(n) + "<triple>\n";
-        s = s + indent(n+1) + "<boolean>\n" +
-            indent(n+2) + "<value>" + this.op + "</value>\n";
+    toXCQL: function (n, c) {
+        var s = indent(n, c) + "<triple>\n";
+        s = s + indent(n+1, c) + "<boolean>\n" +
+            indent(n+2, c) + "<value>" + this.op + "</value>\n";
         if (this.modifiers.length > 0) {
-            s = s + indent(n+2) + "<modifiers>\n";
+            s = s + indent(n+2, c) + "<modifiers>\n";
             for (var i = 0; i < this.modifiers.length; i++)
-                s = s + this.modifiers[i].toXCQL(n+2);
-            s = s + indent(n+2) + "</modifiers>\n";
+                s = s + this.modifiers[i].toXCQL(n+2, c);
+            s = s + indent(n+2, c) + "</modifiers>\n";
         }
-        s = s + indent(n+1) + "</boolean>\n";
-        s = s + indent(n+1) + "<leftOperand>\n" +
-            this.left.toXCQL(n+2) + indent(n+1) + "</leftOperand>\n";
+        s = s + indent(n+1, c) + "</boolean>\n";
+        s = s + indent(n+1, c) + "<leftOperand>\n" +
+            this.left.toXCQL(n+2, c) + indent(n+1, c) + "</leftOperand>\n";
 
-        s = s + indent(n+1) + "<rightOperand>\n" +
-            this.right.toXCQL(n+2) + indent(n+1) + "</rightOperand>\n";
-        s = s + indent(n) + "</triple>\n";
+        s = s + indent(n+1, c) + "<rightOperand>\n" +
+            this.right.toXCQL(n+2, c) + indent(n+1, c) + "</rightOperand>\n";
+        s = s + indent(n, c) + "</triple>\n";
         return s;
     },
 
-    toFQ: function () {
-      var s = ' { "op": "'+this.op+'"';
+    toFQ: function (n, c, nl) {
+      var s = '{"op": "'+this.op+'"';
       //proximity modifiers
       for (var i = 0; i < this.modifiers.length; i++)
         s += ', ' + this.modifiers[i].toFQ();
-      s += ', "s1": '+this.left.toFQ();
-      s += ', "s2": '+this.right.toFQ();
-      s += ' }'
+      s += ','+nl+indent(n, c)+' "s1": '+this.left.toFQ(n+1, c, nl);
+      s += ','+nl+indent(n, c)+' "s2": '+this.right.toFQ(n+1, c, nl);
+      var fill = n && c ? ' ' : '';
+      s += nl+indent(n-1, c)+fill+'}';
       return s;
     }
 
@@ -246,7 +249,9 @@ CQLParser.prototype = {
           node.field = fq.hasOwnProperty('field') 
             ? fq.field : 'cql.serverChoice';
           node.relation = fq.hasOwnProperty('relation')
-            ? node._remapRelation(fq.relation) : 'scr';
+            ? node._remapRelation(fq.relation) :
+            //HACK: if the field is set, assume '=' rather than scr
+            (fq.hasOwnProperty('field') ? '=' : 'scr');
           //include all other members as modifiers
           node.relationuri = '';
           node.fielduri = '';
@@ -264,11 +269,14 @@ CQLParser.prototype = {
         }
         throw new Error('Unknow node type; '+JSON.stringify(fq));
     },
-    toXCQL: function () {
-        return this.tree.toXCQL();
+    toXCQL: function (c) {
+        c = typeof c == "undefined" ? ' ' : c;
+        return this.tree.toXCQL(0, c);
     },
-    toFQ: function () {
-        return this.tree.toFQ();
+    toFQ: function (c, nl) {
+        c = typeof c == "undefined" ? '  ' : c;
+        nl = typeof nl == "undefined" ? '\n' : c;
+        return this.tree.toFQ(0, c, nl);
     },
     toString: function () {
         return this.tree.toString();
