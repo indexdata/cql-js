@@ -1,5 +1,8 @@
 var EXPORTED_SYMBOLS = ["CQLParser"];
 
+var DEFAULT_SERVER_CHOICE_FIELD = 'cql.serverChoice';
+var DEFAULT_SERVER_CHOICE_RELATION = 'scr';
+
 function indent(n, c) {
     var s = "";
     for (var i = 0; i < n; i++)
@@ -42,20 +45,22 @@ CQLModifier.prototype = {
 
 // CQLSearchClause
 var CQLSearchClause = function (field, fielduri, relation, relationuri, 
-                                modifiers, term) {
+                                modifiers, term, scf, scr) {
     this.field = field;
     this.fielduri = fielduri;
     this.relation = relation;
     this.relationuri = relationuri;
     this.modifiers = modifiers;
     this.term = term;
+    this.scf = scf || DEFAULT_SERVER_CHOICE_FIELD;
+    this.scr = scr || DEFAULT_SERVER_CHOICE_RELATION;
 }
 
 CQLSearchClause.prototype = {
     toString: function () {
       var field = this.field;
       var relation = this.relation;
-      if (field == 'cql.serverChoice' && relation == 'scr') {
+      if (field == this.scf && relation == this.scr) {
         //avoid redundant field/relation
         field = null;
         relation = null;
@@ -99,9 +104,9 @@ CQLSearchClause.prototype = {
 
     toFQ: function () {
         var s = '{"term": "'+this.term+'"';
-        if (this.field.length > 0 && this.field != 'cql.serverChoice')
+        if (this.field.length > 0 && this.field != this.scf)
           s+= ', "field": "'+this.field+'"';
-        if (this.relation.length > 0 && this.relation != 'scr')
+        if (this.relation.length > 0 && this.relation != this.scr)
           s+= ', "relation": "'+this._mapRelation(this.relation)+'"';
         for (var i = 0; i < this.modifiers.length; i++) {
           //since modifiers are mapped to keys, ignore the reserved ones
@@ -198,26 +203,35 @@ var CQLParser = function () {
     this.val = null;
     this.prefixes = new Object();
     this.tree = null;
+    this.scf = null;
+    this.scr = null;
 }
 
 CQLParser.prototype = {
-    parse: function (query) {
+    parse: function (query, scf, scr) {
         if (!query)
             throw new Error("The query to be parsed cannot be empty");
-        
+        this.scf = typeof scf != 'string' 
+          ? DEFAULT_SERVER_CHOICE_FIELD : scf;
+        this.scr = typeof scr != 'string' 
+          ? DEFAULT_SERVER_CHOICE_RELATION : scr; 
         this.qs = query;
         this.ql = this.qs.length;
         this.qi = 0;
         this._move(); 
-        this.tree = this._parseQuery("cql.serverChoice", "scr", new Array());
+        this.tree = this._parseQuery(this.scf, this.scr, new Array());
         if (this.look != "")
             throw new Error("EOF expected");
     },
-    parseFromFQ: function (query) {
+    parseFromFQ: function (query, scf, scr) {
        if (!query)
           throw new Error("The query to be parsed cannot be empty");
        if (typeof query == 'string')
          query = JSON.parse(query);
+       this.scf = typeof scf != 'string' 
+         ? DEFAULT_SERVER_CHOICE_FIELD : scf;
+       this.scr = typeof scr != 'string' 
+         ? DEFAULT_SERVER_CHOICE_RELATION : scr;
        this.tree = this._parseFromFQ(query);
     },
     _parseFromFQ: function (fq) {
@@ -246,12 +260,12 @@ CQLParser.prototype = {
         if (fq.hasOwnProperty('term')) {
           var node = new CQLSearchClause();
           node.term = fq.term;
+          node.scf = this.scf;
+          node.scr = this.scr;
           node.field = fq.hasOwnProperty('field') 
-            ? fq.field : 'cql.serverChoice';
+            ? fq.field : this.scf;
           node.relation = fq.hasOwnProperty('relation')
-            ? node._remapRelation(fq.relation) :
-            //HACK: if the field is set, assume '=' rather than scr
-            (fq.hasOwnProperty('field') ? '=' : 'scr');
+            ? node._remapRelation(fq.relation) : this.scr;
           //include all other members as modifiers
           node.relationuri = '';
           node.fielduri = '';
@@ -385,7 +399,9 @@ CQLParser.prototype = {
                         relation,
                         reluri,
                         modifiers,
-                        first);
+                        first,
+                        this.scf,
+                        this.scr);
                 return sc;
             }
         // prefixes
