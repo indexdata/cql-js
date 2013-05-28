@@ -1,4 +1,4 @@
-Comman Query Language parser in JavaScript
+Common Query Language parser in JavaScript
 ==========================================
 
 A hand-written, recursive descent parser of the Common Query Language as
