@@ -1,7 +1,7 @@
-Common Query Language parser in JavaScript
+Contextual Query Language parser in JavaScript
 ==========================================
 
-A hand-written, recursive descent parser of the Common Query Language as
+A hand-written, recursive descent parser of the Contextual Query Language as
 used in the standardized information retrieval protocols - SRU/W.
 
 The parser can be used in places where the front-end query analysis is 
