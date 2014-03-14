@@ -431,41 +431,55 @@ CQLParser.prototype = {
 
     },
     _move: function () {
+        //eat whitespace
         while (this.qi < this.ql 
                && this._strchr(" \t\r\n", this.qs.charAt(this.qi)))
             this.qi++;
+        //eof
         if (this.qi == this.ql) {
             this.look = "";
             return;
         }
+        //current char
         var c = this.qs.charAt(this.qi);
+        //separators
         if (this._strchr("()/", c)) {
             this.look = c;
             this.qi++;
+        //comparitor
         } else if (this._strchr("<>=", c)) {
             this.look = c;
             this.qi++;
+            //comparitors can repeat, could be if
             while (this.qi < this.ql 
                    && this._strchr("<>=", this.qs.charAt(this.qi))) {
                 this.look = this.look + this.qs.charAt(this.qi);
                 this.qi++;
             }
+        //quoted string
         } else if (this._strchr("\"'", c)) {
             this.look = "q";
+            //remember quote char
             var mark = c;
             this.qi++;
             this.val = "";
-            while (this.qi < this.ql 
-                   && this.qs.charAt(this.qi) != mark) {
-                if (this.qs.charAt(this.qi) == '\\' 
-                    && this.qi < this.ql-1)
-                    this.qi++;
-                this.val = this.val + this.qs.charAt(this.qi);
-                this.qi++;
+            var escaped = false;
+            while (this.qi < this.ql) {
+              if (!escaped && this.qs.charAt(this.qi) == mark)
+                break;
+              if (!escaped && this.qs.charAt(this.qi) == '\\')
+                escaped = true;
+              else
+                escaped = false;
+              this.val += this.qs.charAt(this.qi);
+              this.qi++;
             }
             this.lval = this.val.toLowerCase();
             if (this.qi < this.ql)
                 this.qi++;
+            else //unterminated
+              this.look = ""; //notify error
+        //unquoted string
         } else {
             this.look = "s";
             this.val = "";
