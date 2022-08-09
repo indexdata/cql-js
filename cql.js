@@ -513,3 +513,6 @@ CQLParser.prototype = {
         this.prefixes[name] = value;
     }
 }
+
+// for module import systems uncomment the following line
+// module.exports = CQLParser;
