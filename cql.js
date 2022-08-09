@@ -9,6 +9,19 @@ function indent(n, c) {
         s = s + c;
     return s;
 }
+
+var CQLError = function (message, query, pos, look, val, lval) {
+    this.name = "CQLError";
+    this.message = message;
+    this.query = query;
+    this.pos = pos;
+    this.look = look;
+    this.val = val;
+    this.lval = lval;
+    this.stack = (new Error()).stack;
+}
+CQLError.prototype = Object.create(Error.prototype);
+
 // CQLModifier
 var CQLModifier = function () {
     this.name = null;
@@ -209,7 +222,7 @@ var CQLParser = function () {
 CQLParser.prototype = {
     parse: function (query, scf, scr) {
         if (!query)
-            throw new Error("The query to be parsed cannot be empty");
+            throw new CQLError("The query to be parsed cannot be empty", this.qs);
         this.scf = typeof scf != 'string'
             ? DEFAULT_SERVER_CHOICE_FIELD : scf;
         this.scr = typeof scr != 'string'
@@ -220,11 +233,11 @@ CQLParser.prototype = {
         this._move();
         this.tree = this._parseQuery(this.scf, this.scr, new Array());
         if (this.look != "")
-            throw new Error("EOF expected");
+            throw new CQLError("EOF expected", this.qs, this.qi, this.look, this.val, this.lval);
     },
     parseFromFQ: function (query, scf, scr) {
         if (!query)
-            throw new Error("The query to be parsed cannot be empty");
+            throw new CQLError("The query to be parsed cannot be empty", this.qs);
         if (typeof query == 'string')
             query = JSON.parse(query);
         this.scf = typeof scf != 'string'
@@ -280,7 +293,7 @@ CQLParser.prototype = {
             }
             return node;
         }
-        throw new Error('Unknow node type; ' + JSON.stringify(fq));
+        throw new CQLError('Unknow node type; ' + JSON.stringify(fq), this.qs, this.qi, this.look, this.val, this.lval);
     },
     toXCQL: function (c) {
         c = typeof c == "undefined" ? ' ' : c;
@@ -316,7 +329,7 @@ CQLParser.prototype = {
         while (this.look == "/") {
             this._move();
             if (this.look != "s" && this.look != "q")
-                throw new Error("Invalid modifier.")
+                throw new CQLError("Invalid modifier.", this.qs, this.qi, this.look, this.val, this.lval)
 
             var name = this.lval;
             this._move();
@@ -325,7 +338,7 @@ CQLParser.prototype = {
                 var rel = this.look;
                 this._move();
                 if (this.look != "s" && this.look != "q")
-                    throw new Error("Invalid relation within the modifier.");
+                    throw new CQLError("Invalid relation within the modifier.", this.qs, this.qi, this.look, this.val, this.lval);
 
                 var m = new CQLModifier();
                 m.name = name;
@@ -350,7 +363,7 @@ CQLParser.prototype = {
             if (this.look == ")")
                 this._move();
             else
-                throw new Error("Missing closing parenthesis.");
+                throw new CQLError("Missing closing parenthesis.", this.qs, _qi, this.look, this.val, this.lval);
 
             return b;
         } else if (this.look == "s" || this.look == "q") {
@@ -407,14 +420,14 @@ CQLParser.prototype = {
         } else if (this.look == ">") {
             this._move();
             if (this.look != "s" && this.look != "q")
-                throw new Error("Expecting string or a quoted expression.");
+                throw new CQLError("Expecting string or a quoted expression.", this.qs, this.qi, this.look, this.val, this.lval);
 
             var first = this.lval;
             this._move();
             if (this.look == "=") {
                 this._move();
                 if (this.look != "s" && this.look != "q")
-                    throw new Error("Expecting string or a quoted expression.");
+                    throw new CQLError("Expecting string or a quoted expression.", this.qs, this.qi, this.look, this.val, this.lval);
 
                 this._addPrefix(first, this.lval);
                 this._move();
@@ -424,7 +437,7 @@ CQLParser.prototype = {
                 return this._parseQuery(field, relation, modifiers);
             }
         } else {
-            throw new Error("Invalid search clause.");
+            throw new CQLError("Invalid search clause.", this.qs, this.qi, this.look, this.val, this.lval);
         }
 
     },

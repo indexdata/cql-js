@@ -15,8 +15,13 @@
                 cp.parseFromFQ(fq);
                 document.getElementById("output4").value = cp.toString();
             } catch (e) {
-                document.getElementById("output").value = e.message;
-                document.getElementById("output2").value = e.message;
+                var msg = e.toString();
+                msg += "\n\n\tquery: " + e.query + "\n\t       " + "^".padStart(e.pos) + " (pos: " + e.pos + ")";
+                msg += "\n\n\tcontext: " + JSON.stringify({"look": e.look, "val": e.val, "lval": e.lval});
+                document.getElementById("output").value = msg;
+                document.getElementById("output2").value = "";
+                document.getElementById("output3").value = "";
+                document.getElementById("output4").value = "";
                 throw e;
             }
         }
