@@ -27,6 +27,8 @@ var CQLModifier = function () {
     this.name = null;
     this.relation = null;
     this.value = null;
+    this._pos = null;
+    this._range = null;
 }
 
 CQLModifier.prototype = {
@@ -52,6 +54,8 @@ CQLModifier.prototype = {
         //we assume 'true'
         var value = this.value.length > 0 ? this.value : "true";
         var s = '"' + this.name + '": "' + value + '"';
+        if (this._pos !== null) s += ', "' + this.name + '@pos": ' + this._pos;
+        if (this._range !== null) s += ', "' + this.name + '@range": ' + JSON.stringify(this._range);
         return s;
     }
 }
@@ -67,6 +71,8 @@ var CQLSearchClause = function (field, fielduri, relation, relationuri,
     this.term = term;
     this.scf = scf || DEFAULT_SERVER_CHOICE_FIELD;
     this.scr = scr || DEFAULT_SERVER_CHOICE_RELATION;
+    this._pos = null;
+    this._range = null;
 }
 
 CQLSearchClause.prototype = {
@@ -128,6 +134,8 @@ CQLSearchClause.prototype = {
                 continue;
             s += ', ' + this.modifiers[i].toFQ();
         }
+        if (this._pos !== null) s += ', "@pos": ' + this._pos;
+        if (this._range !== null) s += ', "@range": ' + JSON.stringify(this._range);
         s += '}';
         return s;
     },
@@ -163,6 +171,7 @@ var CQLBoolean = function () {
     this.modifiers = null;
     this.left = null;
     this.right = null;
+    this._pos = null;
 }
 
 CQLBoolean.prototype = {
@@ -199,6 +208,7 @@ CQLBoolean.prototype = {
             s += ', ' + this.modifiers[i].toFQ();
         s += ',' + nl + indent(n, c) + ' "s1": ' + this.left.toFQ(n + 1, c, nl);
         s += ',' + nl + indent(n, c) + ' "s2": ' + this.right.toFQ(n + 1, c, nl);
+        if (this._pos !== null) s += ',' + nl + indent(n, c) + ' "@pos": ' + this._pos;
         var fill = n && c ? ' ' : '';
         s += nl + indent(n - 1, c) + fill + '}';
         return s;
@@ -213,6 +223,7 @@ var CQLParser = function () {
     this.look = null;
     this.lval = null;
     this.val = null;
+    this._exprStart = null;
     this.prefixes = new Object();
     this.tree = null;
     this.scf = null;
@@ -230,6 +241,7 @@ CQLParser.prototype = {
         this.qs = query;
         this.ql = this.qs.length;
         this.qi = 0;
+        this.lval = this.val = this._exprStart = null;
         this._move();
         this.tree = this._parseQuery(this.scf, this.scr, new Array());
         if (this.look != "")
@@ -285,6 +297,8 @@ CQLParser.prototype = {
             for (var key in fq) {
                 if (key == 'term' || key == 'field' || key == 'relation')
                     continue;
+                if (key.endsWith("@pos") || key.endsWith("@range"))
+                    continue;
                 var mod = new CQLModifier();
                 mod.name = key;
                 mod.relation = '=';
@@ -315,6 +329,7 @@ CQLParser.prototype = {
             this.lval == "not" ||
             this.lval == "prox")) {
             var b = new CQLBoolean();
+            b._pos = this.qi - this.lval.length + 1;
             b.op = this.lval;
             this._move();
             b.modifiers = this._parseModifiers();
@@ -327,20 +342,26 @@ CQLParser.prototype = {
     _parseModifiers: function () {
         var ar = new Array();
         while (this.look == "/") {
+            let _mstart = this.qi;
             this._move();
             if (this.look != "s" && this.look != "q")
                 throw new CQLError("Invalid modifier.", this.qs, this.qi, this.look, this.val, this.lval)
 
             var name = this.lval;
+            let _mpos = this.qi - this.lval.length + 1;
+            let _mend = this.qi;
             this._move();
             if (this.look.length > 0
                 && this._strchr("<>=", this.look.charAt(0))) {
                 var rel = this.look;
                 this._move();
+                _mend = this.qi;
                 if (this.look != "s" && this.look != "q")
                     throw new CQLError("Invalid relation within the modifier.", this.qs, this.qi, this.look, this.val, this.lval);
 
                 var m = new CQLModifier();
+                m._pos = _mpos;
+                m._range = [_mstart, _mend];
                 m.name = name;
                 m.relation = rel;
                 m.value = this.val;
@@ -348,6 +369,8 @@ CQLParser.prototype = {
                 this._move();
             } else {
                 var m = new CQLModifier();
+                m._pos = _mpos;
+                m._range = [_mstart, _mend];
                 m.name = name;
                 m.relation = "";
                 m.value = "";
@@ -358,6 +381,7 @@ CQLParser.prototype = {
     },
     _parseSearchClause: function (field, relation, modifiers) {
         if (this.look == "(") {
+            let _qi = this.qi;
             this._move();
             var b = this._parseQuery(field, relation, modifiers);
             if (this.look == ")")
@@ -368,6 +392,9 @@ CQLParser.prototype = {
             return b;
         } else if (this.look == "s" || this.look == "q") {
             var first = this.val;   // dont know if field or term yet
+            if (this._exprStart === null)
+                this._exprStart = this.qi - this.val.length + 1;
+            let _tend = this.qi;
             this._move();
             if (this.look == "q" ||
                 (this.look == "s" &&
@@ -414,6 +441,8 @@ CQLParser.prototype = {
                     first,
                     this.scf,
                     this.scr);
+                sc._range = [this._exprStart, _tend];
+                this._exprStart = null;
                 return sc;
             }
             // prefixes
@@ -469,6 +498,8 @@ CQLParser.prototype = {
             }
             //quoted string
         } else if (this._strchr("\"'", c)) {
+            if (this._exprStart === null)
+                this._exprStart = this.qi + 1;
             this.look = "q";
             //remember quote char
             var mark = c;
