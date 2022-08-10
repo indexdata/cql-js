@@ -346,6 +346,7 @@ CQLParser.prototype = {
     },
     _parseModifiers: function () {
         var ar = new Array();
+        let _safeExprStart = this._exprStart;
         while (this.look == "/") {
             let _mstart = this.qi;
             this._move();
@@ -384,6 +385,7 @@ CQLParser.prototype = {
                 ar.push(m);
             }
         }
+        this._exprStart = _safeExprStart;
         return ar;
     },
     _parseSearchClause: function (field, relation, modifiers) {
