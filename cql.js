@@ -172,6 +172,7 @@ var CQLBoolean = function () {
     this.left = null;
     this.right = null;
     this._pos = null;
+    this._range = null;
 }
 
 CQLBoolean.prototype = {
@@ -209,6 +210,7 @@ CQLBoolean.prototype = {
         s += ',' + nl + indent(n, c) + ' "s1": ' + this.left.toFQ(n + 1, c, nl);
         s += ',' + nl + indent(n, c) + ' "s2": ' + this.right.toFQ(n + 1, c, nl);
         if (this._pos !== null) s += ',' + nl + indent(n, c) + ' "@pos": ' + this._pos;
+        if (this._range !== null) s += ',' + nl + indent(n, c) + ' "@range": ' + JSON.stringify(this._range);
         var fill = n && c ? ' ' : '';
         s += nl + indent(n - 1, c) + fill + '}';
         return s;
@@ -272,6 +274,8 @@ CQLParser.prototype = {
             for (var key in fq) {
                 if (key == 'op' || key == 's1' || key == 's2')
                     continue;
+                if (key.endsWith("@pos") || key.endsWith("@range"))
+                    continue;
                 var mod = new CQLModifier();
                 mod.name = key;
                 mod.relation = '=';
@@ -333,6 +337,7 @@ CQLParser.prototype = {
             b.op = this.lval;
             this._move();
             b.modifiers = this._parseModifiers();
+            b._range = [b._pos, Math.max(b._pos + b.op.length - 1, Math.max.apply(null, b.modifiers.map(x => ("_range" in x) ? x._range[1]: 0)))];
             b.left = left;
             b.right = this._parseSearchClause(field, relation, modifiers);
             left = b;
@@ -362,6 +367,7 @@ CQLParser.prototype = {
                 var m = new CQLModifier();
                 m._pos = _mpos;
                 m._range = [_mstart, _mend];
+                this._exprStart = null;
                 m.name = name;
                 m.relation = rel;
                 m.value = this.val;
@@ -371,6 +377,7 @@ CQLParser.prototype = {
                 var m = new CQLModifier();
                 m._pos = _mpos;
                 m._range = [_mstart, _mend];
+                this._exprStart = null;
                 m.name = name;
                 m.relation = "";
                 m.value = "";

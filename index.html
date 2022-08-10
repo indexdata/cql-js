@@ -9,23 +9,29 @@
           cp.parse(query);
           var fq = JSON.parse(cp.toFQ());
 
-          function recMods (obj, s) {
+          function recMods (obj, s, lvl) {
+            if (lvl === undefined) lvl = 0;
             if ("term" in obj) {
+              if ("@range" in obj) {
+                let range = obj["@range"];
+                s += '\n' + ("".padStart(range[0] - 1) + "t".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl) + "[term:" + range + "]"
+              }
               Object.entries(obj).filter(x => x[0].endsWith("@range") && x[0].length > 6).map(([_, range]) => {
-                s += '\n' + "".padStart(range[0] - 1) + "m".padEnd(range[1] - range[0] + 1, "-")
+                s += '\n' + ("".padStart(range[0] - 1) + "m".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl + 1) + "[term:mod:" + range + "]"
               })
-              if ("@range" in obj)
-                s += '\n' + "".padStart(obj["@range"][0] - 1) + "t".padEnd(obj["@range"][1] - obj["@range"][0] + 1, "-")
             } else if ("op" in obj) {
-              if ("@pos" in obj)
-                s += '\n' + "r".padEnd(obj.op.length, "-").padStart(obj["@pos"] + obj.op.length - 1)
-              
-              Object.entries(obj).filter(x => x[0].endsWith("@range")).map(([_, range]) => {
-                s += '\n' + "".padStart(range[0] - 1) + "m".padEnd(range[1] - range[0] + 1, "-")
+              if ("@range" in obj) {
+                let range = obj["@range"];
+                s += '\n' + ("".padStart(range[0] - 1) + "o".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl) + "[op:" + range + "]"
+              } else if ("@pos" in obj) {
+                let range = [obj["@pos"], obj["@pos"] + obj.op.length - 1]
+                s += '\n' + ("o".padEnd(obj.op.length, "-").padStart(obj["@pos"] + obj.op.length - 1)).padEnd(query.length + 1 + lvl) + "[op:" + range + "]"
+              }
+              Object.entries(obj).filter(x => x[0].endsWith("@range")  && x[0].length > 6).map(([_, range]) => {
+                s += '\n' + ("".padStart(range[0] - 1) + "m".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl + 1) + "[op:mod:" + range + "]"
               })
-              
-              s = recMods(obj.s1, s);
-              s = recMods(obj.s2, s);
+              s = recMods(obj.s1, s, lvl+1);
+              s = recMods(obj.s2, s, lvl+1);
             }
             return s;
           }
