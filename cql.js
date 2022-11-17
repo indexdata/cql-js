@@ -73,6 +73,7 @@ var CQLSearchClause = function (field, fielduri, relation, relationuri,
     this.scr = scr || DEFAULT_SERVER_CHOICE_RELATION;
     this._pos = null;
     this._range = null;
+    this._relpos = null;
 }
 
 CQLSearchClause.prototype = {
@@ -136,6 +137,7 @@ CQLSearchClause.prototype = {
         }
         if (this._pos !== null) s += ', "@pos": ' + this._pos;
         if (this._range !== null) s += ', "@range": ' + JSON.stringify(this._range);
+        if (this._relpos !== null) s += ', "relation@pos": ' + this._relpos;
         s += '}';
         return s;
     },
@@ -226,6 +228,7 @@ var CQLParser = function () {
     this.lval = null;
     this.val = null;
     this._exprStart = null;
+    this._exprRelStart = null;
     this.prefixes = new Object();
     this.tree = null;
     this.scf = null;
@@ -451,7 +454,8 @@ CQLParser.prototype = {
                     this.scf,
                     this.scr);
                 sc._range = [this._exprStart, _tend];
-                this._exprStart = null;
+                sc._relpos = this._exprRelStart;
+                this._exprStart = this._exprRelStart = null;
                 return sc;
             }
             // prefixes
@@ -499,6 +503,7 @@ CQLParser.prototype = {
         } else if (this._strchr("<>=", c)) {
             this.look = c;
             this.qi++;
+            this._exprRelStart = this.qi;
             //comparitors can repeat, could be if
             while (this.qi < this.ql
                 && this._strchr("<>=", this.qs.charAt(this.qi))) {

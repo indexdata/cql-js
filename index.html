@@ -16,8 +16,13 @@
                 let range = obj["@range"];
                 s += '\n' + ("".padStart(range[0] - 1) + "t".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl) + "[term:" + range + "]"
               }
+              if ("relation@pos" in obj) {
+                let relpos = obj["relation@pos"];
+                let relmodend = Math.max(...Object.entries(obj).filter(x => x[0].endsWith("@range") && x[0].length > 6).map(([_, range]) => range[1]));
+                s += '\n' + ("".padStart(relpos - 1) + "r".padEnd(relmodend - relpos + 1, "-")).padEnd(query.length + 1 + lvl + 1) + "[term:rel:" + obj["relation"] + ":" + relpos + "]"
+              }
               Object.entries(obj).filter(x => x[0].endsWith("@range") && x[0].length > 6).map(([_, range]) => {
-                s += '\n' + ("".padStart(range[0] - 1) + "m".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl + 1) + "[term:mod:" + range + "]"
+                s += '\n' + ("".padStart(range[0] - 1) + "m".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl + 2) + "[term:mod:" + range + "]"
               })
             } else if ("op" in obj) {
               if ("@range" in obj) {
