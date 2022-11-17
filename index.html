@@ -66,6 +66,28 @@
             }
         }
     </script>
+    <style type="text/css">
+      .output {
+        position: relative;
+        width: 49%;
+        display: inline-block;
+      }
+      .output > textarea {
+        width: 100%;
+
+      }
+      .output > .label {
+        position: absolute;
+        top: 1ex;
+        right: 1ex;
+        padding: 3px;
+        margin: 0px;
+        color: #0000005e;
+        border: 1px solid #0000005e;
+        border-radius: 3px;
+        pointer-events: none;
+      }
+    </style>
     <title>CQL parser</title>
   </head>
   <body>
@@ -73,16 +95,27 @@
       <form name="test" onsubmit="parseInput(this.q.value); return false;">
         Query: 
         <input type="text" name="q" size="160" onkeyup="parseInput(this.value); return false;"></input>
-        <br>
-        <br>
-        XCQL:
-        <br>
       </form>
-      <textarea id="output" rows="80" cols="80"></textarea>
-      <textarea id="output2" rows="80" cols="80"></textarea>
-      <textarea id="output3" rows="80" cols="80"></textarea>
-      <textarea id="output4" rows="80" cols="80"></textarea>
-      <textarea id="output5" rows="80" cols="80"></textarea>
+      <div class="output">
+        <div class="label">XCQL</div>
+        <textarea id="output" rows="10" cols="80" readonly></textarea>
+      </div>
+      <div class="output">
+        <div class="label">String</div>
+        <textarea id="output2" rows="10" cols="80" readonly></textarea>
+      </div>
+      <div class="output">
+        <div class="label">FQ</div>
+        <textarea id="output3" rows="10" cols="80" readonly></textarea>
+      </div>
+      <div class="output">
+        <div class="label">String (FQ-parsed)</div>
+        <textarea id="output4" rows="10" cols="80" readonly></textarea>
+      </div>
+      <div class="output">
+        <div class="label">Annotated<br/>(original input)</div>
+        <textarea id="output5" rows="8" cols="80" readonly></textarea>
+      </div>
     </div>
   </body>
 </html>
