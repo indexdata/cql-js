@@ -165,8 +165,8 @@ CQLSearchClause.prototype = {
             default: return rel;
         }
     }
-
 }
+
 // CQLBoolean
 var CQLBoolean = function () {
     this.op = null;
@@ -184,6 +184,7 @@ CQLBoolean.prototype = {
             (this.modifiers.length > 0 ? '/' + this.modifiers.join('/') : '') +
             ' ' + (this.right.op ? '(' + this.right + ')' : this.right);;
     },
+
     toXCQL: function (n, c) {
         var s = indent(n, c) + "<triple>\n";
         s = s + indent(n + 1, c) + "<boolean>\n" +
@@ -219,6 +220,7 @@ CQLBoolean.prototype = {
     }
 
 }
+
 // CQLParser
 var CQLParser = function () {
     this.qi = null;
