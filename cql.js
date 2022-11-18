@@ -419,6 +419,7 @@ CQLParser.prototype = {
                     this.lval != "not" &&
                     this.lval != "prox")) {
                 var rel = this.val;    // string relation
+                this._exprRelStart = this.qi - this.val.length + 1;
                 this._move();
                 return this._parseSearchClause(first, rel,
                     this._parseModifiers());
