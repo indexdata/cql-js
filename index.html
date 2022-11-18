@@ -4,6 +4,48 @@
     <script type="text/javascript">
         var cp = new CQLParser();
         
+        function buildVis(query) {
+          var cp = new CQLParser();
+          cp.parse(query);
+          var fq = JSON.parse(cp.toFQ());
+
+          function recMods (obj, s, lvl) {
+            if (lvl === undefined) lvl = 0;
+            if ("term" in obj) {
+              if ("@range" in obj) {
+                let range = obj["@range"];
+                s += '\n' + ("".padStart(range[0] - 1) + "t".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl) + "[term:" + range + "]"
+              }
+              if ("relation@pos" in obj) {
+                let relpos = obj["relation@pos"];
+                let relmodend = Math.max(...Object.entries(obj).filter(x => x[0].endsWith("@range") && x[0].length > 6).map(([_, range]) => range[1]));
+                s += '\n' + ("".padStart(relpos - 1) + "r".padEnd(relmodend - relpos + 1, "-")).padEnd(query.length + 1 + lvl + 1) + "[term:rel:" + obj["relation"] + ":" + relpos + "]"
+              }
+              Object.entries(obj).filter(x => x[0].endsWith("@range") && x[0].length > 6).map(([_, range]) => {
+                s += '\n' + ("".padStart(range[0] - 1) + "m".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl + 2) + "[term:mod:" + range + "]"
+              })
+            } else if ("op" in obj) {
+              if ("@range" in obj) {
+                let range = obj["@range"];
+                s += '\n' + ("".padStart(range[0] - 1) + "o".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl) + "[op:" + range + "]"
+              } else if ("@pos" in obj) {
+                let range = [obj["@pos"], obj["@pos"] + obj.op.length - 1]
+                s += '\n' + ("o".padEnd(obj.op.length, "-").padStart(obj["@pos"] + obj.op.length - 1)).padEnd(query.length + 1 + lvl) + "[op:" + range + "]"
+              }
+              Object.entries(obj).filter(x => x[0].endsWith("@range")  && x[0].length > 6).map(([_, range]) => {
+                s += '\n' + ("".padStart(range[0] - 1) + "m".padEnd(range[1] - range[0] + 1, "-")).padEnd(query.length + 1 + lvl + 1) + "[op:mod:" + range + "]"
+              })
+              s = recMods(obj.s1, s, lvl+1);
+              s = recMods(obj.s2, s, lvl+1);
+            }
+            return s;
+          }
+
+          var vis = query;
+          vis = recMods(fq, vis);
+          return vis;
+        }
+
         function parseInput(query) {
             try {
                 cp.parse(query);
@@ -14,13 +56,43 @@
                 document.getElementById("output3").value = fq;
                 cp.parseFromFQ(fq);
                 document.getElementById("output4").value = cp.toString();
+                // visualize positions/ranges in original query
+                document.getElementById("output5").value = buildVis(query);
             } catch (e) {
-                document.getElementById("output").value = e.message;
-                document.getElementById("output2").value = e.message;
+                var msg = e.toString();
+                msg += "\n\n\tquery: " + e.query + "\n\t       " + "^".padStart(e.pos) + " (pos: " + e.pos + ")";
+                msg += "\n\n\tcontext: " + JSON.stringify({"look": e.look, "val": e.val, "lval": e.lval});
+                document.getElementById("output").value = msg;
+                document.getElementById("output2").value = "";
+                document.getElementById("output3").value = "";
+                document.getElementById("output4").value = "";
+                document.getElementById("output5").value = "";
                 throw e;
             }
         }
     </script>
+    <style type="text/css">
+      .output {
+        position: relative;
+        width: 49%;
+        display: inline-block;
+      }
+      .output > textarea {
+        width: 100%;
+
+      }
+      .output > .label {
+        position: absolute;
+        top: 1ex;
+        right: 1ex;
+        padding: 3px;
+        margin: 0px;
+        color: #0000005e;
+        border: 1px solid #0000005e;
+        border-radius: 3px;
+        pointer-events: none;
+      }
+    </style>
     <title>CQL parser</title>
   </head>
   <body>
@@ -28,15 +100,27 @@
       <form name="test" onsubmit="parseInput(this.q.value); return false;">
         Query: 
         <input type="text" name="q" size="160" onkeyup="parseInput(this.value); return false;"></input>
-        <br>
-        <br>
-        XCQL:
-        <br>
       </form>
-      <textarea id="output" rows="80" cols="80"></textarea>
-      <textarea id="output2" rows="80" cols="80"></textarea>
-      <textarea id="output3" rows="80" cols="80"></textarea>
-      <textarea id="output4" rows="80" cols="80"></textarea>
+      <div class="output">
+        <div class="label">XCQL</div>
+        <textarea id="output" rows="10" cols="80" readonly></textarea>
+      </div>
+      <div class="output">
+        <div class="label">String</div>
+        <textarea id="output2" rows="10" cols="80" readonly></textarea>
+      </div>
+      <div class="output">
+        <div class="label">FQ</div>
+        <textarea id="output3" rows="10" cols="80" readonly></textarea>
+      </div>
+      <div class="output">
+        <div class="label">String (FQ-parsed)</div>
+        <textarea id="output4" rows="10" cols="80" readonly></textarea>
+      </div>
+      <div class="output">
+        <div class="label">Annotated<br/>(original input)</div>
+        <textarea id="output5" rows="8" cols="80" readonly></textarea>
+      </div>
     </div>
   </body>
 </html>
