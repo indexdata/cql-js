@@ -13,10 +13,15 @@ function indent(n, c) {
 var CQLError = function (message, query, pos, look, val, lval) {
     this.name = "CQLError";
     this.message = message;
+    // raw query string
     this.query = query;
+    // parser (error) position in raw query
     this.pos = pos;
+    // state: s | q | | ()/ | <>= | "'
     this.look = look;
+    // value of token (may be (quoted) content, "index"; field or term)
     this.val = val;
+    // lowercased this.val
     this.lval = lval;
     this.stack = (new Error()).stack;
 }
@@ -24,8 +29,11 @@ CQLError.prototype = Object.create(Error.prototype);
 
 // CQLModifier
 var CQLModifier = function () {
+    // name of (relation) modifier
     this.name = null;
+    // relation of modifier value (e.g. equals, lower than, etc.)
     this.relation = null;
+    // optional value of modifier ("true" if empty)
     this.value = null;
     this._pos = null;
     this._range = null;
@@ -63,16 +71,25 @@ CQLModifier.prototype = {
 // CQLSearchClause
 var CQLSearchClause = function (field, fielduri, relation, relationuri,
     modifiers, term, scf, scr) {
+    // index or name
     this.field = field;
+    // not supported yet? (always empty string)
     this.fielduri = fielduri;
+    // relation symbol or string
     this.relation = relation;
+    // not supported yet? (always empty string)
     this.relationuri = relationuri;
+    // list of modifiers
     this.modifiers = modifiers;
+    // value
     this.term = term;
     this.scf = scf || DEFAULT_SERVER_CHOICE_FIELD;
     this.scr = scr || DEFAULT_SERVER_CHOICE_RELATION;
+    // start position of search clause
     this._pos = null;
+    // range (start + end position) of search clause (without surrounding braces or spaces)
     this._range = null;
+    // start position of relation
     this._relpos = null;
 }
 
@@ -169,9 +186,13 @@ CQLSearchClause.prototype = {
 
 // CQLBoolean
 var CQLBoolean = function () {
+    // operator: and | or | not | prox
     this.op = null;
+    // list of modifiers
     this.modifiers = null;
+    // left search clause
     this.left = null;
+    // right search clause
     this.right = null;
     this._pos = null;
     this._range = null;
@@ -223,15 +244,25 @@ CQLBoolean.prototype = {
 
 // CQLParser
 var CQLParser = function () {
+    // index/position in raw query
     this.qi = null;
+    // raw query string length (char count)
     this.ql = null;
+    // raw query string
     this.qs = null;
+    // parser state: s | q | ()/ | <>= | "'
+    // if empty string then error
     this.look = null;
+    // lowercased this.val
     this.lval = null;
+    // value of token (may be (quoted) content, "index"; field or term)
     this.val = null;
+    // (internal) start position of expression
     this._exprStart = null;
+    // (internal) start position of relation (in expression)
     this._exprRelStart = null;
     this.prefixes = new Object();
+    // parsed query
     this.tree = null;
     this.scf = null;
     this.scr = null;
